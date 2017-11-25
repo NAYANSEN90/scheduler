@@ -1,4 +1,4 @@
-package com.nrxen.scheduler;
+package com.example.scheduler;
 
 public interface IHashOperation {
 

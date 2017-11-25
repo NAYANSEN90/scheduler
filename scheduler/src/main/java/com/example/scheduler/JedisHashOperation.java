@@ -1,4 +1,4 @@
-package com.nrxen.scheduler;
+package com.example.scheduler;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.Transaction;
