@@ -3,13 +3,16 @@ package com.nrxen.scheduler;
 
 import java.util.UUID;
 
-public class JobStore {
+public class JedisJobStore implements IJobStore {
 
     private JedisQueueOperation queueOperation = new JedisQueueOperation();
+    private JedisHashOperation  hashOperation  = new JedisHashOperation();
 
-    public JobStore(){
+    public JedisJobStore(){
         queueOperation.setQueue("JOB_QUEUE");
+        hashOperation.setHashPrefix("JOB:");
     }
+
     private String generateID(){
         return UUID.randomUUID().toString();
     }
