@@ -51,6 +51,7 @@ public class JedisQueueOperation implements IQueueOperation {
         long currentTime = System.currentTimeMillis();
         Transaction t = jedis.multi();
         Response<Set<String>> resp = t.zrangeByScore(queue,0, currentTime,0, 1);
+        // Remove this current element
         t.exec();
         if(resp.get().isEmpty()){
             return null;
