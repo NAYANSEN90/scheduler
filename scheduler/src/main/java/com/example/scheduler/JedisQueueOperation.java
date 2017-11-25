@@ -1,16 +1,8 @@
 package com.example.scheduler;
 
-
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import io.vertx.redis.RedisClient;
-import io.vertx.redis.RedisTransaction;
-import io.vertx.redis.op.RangeLimitOptions;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.Response;
 import redis.clients.jedis.Transaction;
-
 import java.util.Set;
 
 public class JedisQueueOperation implements IQueueOperation {
@@ -27,7 +19,7 @@ public class JedisQueueOperation implements IQueueOperation {
 
     @Override
     public void setQueue(String name){
-        this.queue = queue;
+        this.queue = name;
     }
 
     @Override
@@ -53,7 +45,7 @@ public class JedisQueueOperation implements IQueueOperation {
         // Remove this current element
         t.exec();
         if(resp.get().isEmpty()){
-            return "";
+            return null;
         }
         return resp.get().toArray()[0].toString();
         // utilize lua to perform this unique delete

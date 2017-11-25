@@ -1,7 +1,10 @@
 package com.example.scheduler;
 
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.Response;
 import redis.clients.jedis.Transaction;
+
+import java.util.Map;
 
 public class JedisHashOperation implements IHashOperation {
 
@@ -19,7 +22,7 @@ public class JedisHashOperation implements IHashOperation {
         this.prefix = prefix;
     }
 
-    public synchronized void addHashed(JobHarness job, String id){
+    public synchronized void addHashed(JobDetail job, String id){
         Transaction t = jedis.multi();
         t.hmset(id, job.transform());
         t.exec();
@@ -29,6 +32,18 @@ public class JedisHashOperation implements IHashOperation {
         Transaction t = jedis.multi();
         t.del(id);
         t.exec();
+    }
+
+    public synchronized JobDetail fetchHash(String id){
+        Transaction t = jedis.multi();
+        Response<Map<String,String>> resp = t.hgetAll(id);
+        t.exec();
+
+        if(resp.get() == null){
+            return null;
+        }
+
+        return new JobDetail( resp.get());
     }
 
     public synchronized void setHashField(String id, String field, String value){
