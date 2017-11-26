@@ -37,6 +37,7 @@ public class JedisJobStore implements IJobStore{
 
 
     public JedisJobStore(){
+        loadLUA();
     }
 
     /* script loading needs to be done separately */
@@ -76,20 +77,6 @@ public class JedisJobStore implements IJobStore{
         return detail;
     }
 
-    private JobDetail fetchJob(String id){
-
-        JobDetail detail = null;
-        Transaction t1 = jedis.multi();
-        Response<Map<String,String>>  resp = t1.hgetAll(HASH_PREFIX + id);
-        t1.exec();
-
-        if(resp.get() != null && !resp.get().isEmpty()){
-            detail = new JobDetail(resp.get());
-        }
-
-        return detail;
-    }
-
     private String fetchJobId(){
 
         String jobId = (String)jedis.evalsha(scriptSHA,
@@ -124,6 +111,21 @@ public class JedisJobStore implements IJobStore{
 
             updateJobState(jobId, "RUNNING");
             detail = fetchJob(jobId);
+        }
+
+        return detail;
+    }
+
+    @Override
+    public synchronized JobDetail fetchJob(String id){
+
+        JobDetail detail = null;
+        Transaction t1 = jedis.multi();
+        Response<Map<String,String>>  resp = t1.hgetAll(HASH_PREFIX + id);
+        t1.exec();
+
+        if(resp.get() != null && !resp.get().isEmpty()){
+            detail = new JobDetail(resp.get());
         }
 
         return detail;

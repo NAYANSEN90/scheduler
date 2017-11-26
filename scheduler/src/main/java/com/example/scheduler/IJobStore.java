@@ -6,4 +6,5 @@ public interface IJobStore {
     public void submitDelayedJobRequest(JobRequest.Request request, int after);
     public JobDetail fetchTimedOutJob();
     public void deleteJob(String id);
+    public JobDetail fetchJob(String id);
 }
