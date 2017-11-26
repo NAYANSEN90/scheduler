@@ -7,7 +7,9 @@ public class Application {
 
         JedisJobStore store = new JedisJobStore();
         store.submitJobRequest(JobRequest.Request.newBuilder().setContent("Hello world Job").build());
-        store.loadLUAScript();
-        JobDetail detail = store.fetchJob();
+        store.loadLUA();
+        JobDetail detail = store.fetchTimedOutJob();
+
+        System.out.println(detail);
     }
 }

@@ -1,7 +1,10 @@
-val = redis.call('zrangebyscore', KEYS[1], 0, KEYS[2], 0, 1)
-if val then
-       redis.call('hset', val,KEYS[4],KEYS[5])
-       redis.call('del', KEYS[1], val)
-       val1 = redis.call('hgetall',val)
+local queue = KEYS[1]
+local now = ARGV[1]
+local payload = nil
+
+local i, payload = next(redis.pcall('ZRANGEBYSCORE', queue, '-inf', now, 'LIMIT', '0' , '1'))
+if payload then
+   redis.pcall('ZREM', queue, payload)
 end
-return val1
+return payload
+
