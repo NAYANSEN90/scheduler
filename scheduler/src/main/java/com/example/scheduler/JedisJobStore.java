@@ -144,10 +144,6 @@ public class JedisJobStore implements IJobStore{
         jedis.scriptFlush();
     }
 
-    private static String generateID(){
-        return UUID.randomUUID().toString();
-    }
-
     private boolean addJob(JobDetail detail, String id, long timeOut){
 
         boolean success = false;
