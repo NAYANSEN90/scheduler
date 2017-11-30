@@ -37,7 +37,7 @@ public class JobWorkerVerticle extends AbstractVerticle {
 
                         try {
                             // sample work
-                            long time = new Random().nextInt(10000);
+                            long time = new Random().nextInt(100);
                             Thread.currentThread().sleep(time);
 
                         }catch (Exception e){
@@ -62,7 +62,7 @@ public class JobWorkerVerticle extends AbstractVerticle {
 
 
                     try {
-                        Thread.currentThread().sleep(100);
+                        Thread.currentThread().sleep(1000);
 
                     }catch (Exception e){
 

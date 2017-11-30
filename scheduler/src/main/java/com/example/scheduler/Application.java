@@ -23,7 +23,7 @@ public class Application {
         //store.flushLUA();
 
         vertx.deployVerticle(new JobWorkerVerticle("JobWorker1", new JedisJobStore()), new DeploymentOptions().setWorker(true));
-        vertx.deployVerticle(new JobWorkerVerticle("JobWorker2", new JedisJobStore()), new DeploymentOptions().setWorker(true));
+        //vertx.deployVerticle(new JobWorkerVerticle("JobWorker2", new JedisJobStore()), new DeploymentOptions().setWorker(true));
 
         vertx.deployVerticle(new JobSubmitterVerticle("JobSubmitter1", new JedisJobStore()), new DeploymentOptions().setWorker(true));
 

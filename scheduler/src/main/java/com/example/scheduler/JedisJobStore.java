@@ -307,12 +307,14 @@ public class JedisJobStore implements IJobStore{
             Transaction t = jedis.multi();
             Response<String> resp = t.evalsha(deleteJobSHA,
                     Arrays.asList(QUEUE_KEY, HASH_PREFIX + id),
-                    Arrays.asList("state", JobState.RUNNING.toString()));
+                    Arrays.asList("state", id));
+            t.exec();
 
             int result = Integer.parseInt(resp.get());
             if(result == 1){
                 success = true;
             }
+
             /*
             t.del(id);
             t.zrem(QUEUE_KEY, id);
