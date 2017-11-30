@@ -17,7 +17,7 @@ public class Application {
 
         //store.submitJobRequest(JobRequest.Request.newBuilder().setContent("Hello world Job").build());
         //store.loadLUA();
-        //JobDetail detail = store.fetchTimedOutJob();
+        //JobDetail detail = store.fetchQueuedJob();
 
         //System.out.println(detail);
         //store.flushLUA();

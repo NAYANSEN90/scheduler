@@ -28,7 +28,7 @@ public class JobWorkerVerticle extends AbstractVerticle {
             @Override
             public void run() {
                 while(polling){
-                    JobDetail detail = store.fetchTimedOutJob();
+                    JobDetail detail = store.fetchQueuedJob();
                     if(detail != null) {
                         System.out.println("-----------------------------------");
                         System.out.println("Fetched job: " + System.currentTimeMillis());

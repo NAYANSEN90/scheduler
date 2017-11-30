@@ -1,8 +1,8 @@
-syntax = "proto3";
+syntax = "proto2";
 package com.nrxen.scheduler.protocol_buffers;
 option java_package = "com.nrxen.scheduler";
 option java_outer_classname = "JobRequest";
 message Request{
-    string id = 1;
-    string content = 2;
+    required string id = 1;
+    required string content = 2;
 }
