@@ -26,8 +26,8 @@ public class JedisJobStore implements IJobStore{
 
     private AtomicBoolean scriptLoaded = new AtomicBoolean(false);
 
-    private String fetchJobLUA  = ResourceUtil.fetchLUA(Constants.FETCH_JOB_LUA);
-    private String deleteJobLUA = ResourceUtil.fetchLUA(Constants.DELETE_JOB_LUA);
+    private String fetchJobLUA;
+    private String deleteJobLUA;
 
     private String fetchJobSHA;
     private String deleteJobSHA;
@@ -48,28 +48,37 @@ public class JedisJobStore implements IJobStore{
 
     private static boolean testJedisConnection(final String host, final int port){
         boolean success = false;
-        do {
+        Jedis tryJedis = null;
+        try {
 
-            if(host == null || host.isEmpty()){
-                break;
-            }
+            do {
 
-            if(port <= 0){
-                break;
+                if (host == null || host.isEmpty()) {
+                    break;
+                }
+
+                if (port <= 0) {
+                    break;
+                }
+                 tryJedis = new Jedis(host, port);
+                String pong = "";
+                try {
+                    pong = tryJedis.ping();
+                } catch (Exception e) {
+                    logger.error(e);
+                    break;
+                }
+                if (!pong.equals("PONG")) {
+                    break;
+                }
+
+                success = true;
+            } while (false);
+        }finally {
+            if(tryJedis != null) {
+                tryJedis.close();
             }
-            Jedis tryJedis = new Jedis(host, port);
-            String pong = "";
-            try {
-                pong = tryJedis.ping();
-            }catch (Exception e){
-                logger.error(e);
-                break;
-            }
-            if(!pong.equals("pong")){
-                break;
-            }
-            success = true;
-        }while(false);
+        }
 
         return success;
     }
@@ -78,7 +87,7 @@ public class JedisJobStore implements IJobStore{
 
         if(!testJedisConnection(Constants.DEFAULT_HOST, Constants.DEFAULT_PORT)){
             throw new IllegalArgumentException(
-                    String.format("Invalid host %s or port %s", host, port));
+                    String.format("Invalid host %s or port %s", Constants.DEFAULT_HOST, Constants.DEFAULT_PORT));
         }
 
         this.host = Constants.DEFAULT_HOST;
@@ -135,9 +144,18 @@ public class JedisJobStore implements IJobStore{
 
 
     public void loadLUA(){
-        if(scriptLoaded.compareAndSet(false, true)) {
-            scriptSHA = jedis.scriptLoad(fetchJobScript);
+
+        try{
+            fetchJobLUA  = ResourceUtil.fetchLUA(Constants.FETCH_JOB_LUA);
+            deleteJobLUA = ResourceUtil.fetchLUA(Constants.DELETE_JOB_LUA);
+
+            fetchJobSHA  = jedis.scriptLoad(fetchJobLUA);
+            deleteJobSHA = jedis.scriptLoad(deleteJobLUA);
+
+        }catch (Exception e){
+            logger.error(e);
         }
+
     }
 
     public void flushLUA(){
@@ -183,7 +201,7 @@ public class JedisJobStore implements IJobStore{
 
     private String fetchQueuedJobId() {
 
-        String jobId = (String)jedis.evalsha(scriptSHA,
+        String jobId = (String)jedis.evalsha(fetchJobSHA,
                 Arrays.asList(QUEUE_KEY),
                 Arrays.asList(String.valueOf(System.currentTimeMillis())));
 
@@ -287,10 +305,21 @@ public class JedisJobStore implements IJobStore{
         boolean success = false;
         try {
             Transaction t = jedis.multi();
+            Response<String> resp = t.evalsha(deleteJobSHA,
+                    Arrays.asList(QUEUE_KEY, HASH_PREFIX + id),
+                    Arrays.asList("state", JobState.RUNNING.toString()));
+
+            int result = Integer.parseInt(resp.get());
+            if(result == 1){
+                success = true;
+            }
+            /*
             t.del(id);
             t.zrem(QUEUE_KEY, id);
             t.exec();
+
             success = true;
+            */
         }catch (Exception e){
             logger.error(e);
         }

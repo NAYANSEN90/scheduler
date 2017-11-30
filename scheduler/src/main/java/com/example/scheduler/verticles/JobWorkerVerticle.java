@@ -44,7 +44,10 @@ public class JobWorkerVerticle extends AbstractVerticle {
 
                         }
 
-
+                        boolean deleted = store.deleteJob(detail.getId());
+                        if(deleted){
+                            System.out.println("Job " + detail.getId() + " is deleted");
+                        }
                         store.jobCompleted(detail.getId(), true);
 
 

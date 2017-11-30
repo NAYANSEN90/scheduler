@@ -12,7 +12,7 @@ public class JobSubmitterVerticle  extends AbstractVerticle{
     private IJobStore store;
     private AtomicBoolean running = new AtomicBoolean(false);
     private boolean abort = false;
-    private int count = 10;
+    private int count = 2;
     private Thread submitter;
 
     public JobSubmitterVerticle(String id, IJobStore store){

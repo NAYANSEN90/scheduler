@@ -1,10 +1,13 @@
 package com.example.scheduler;
 
+import com.google.common.io.Resources;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import org.apache.commons.io.IOUtils;
 
-import java.io.File;
-import java.io.FileInputStream;
+import java.net.URL;
+import java.nio.charset.Charset;
+
 
 public class ResourceUtil {
 
@@ -13,27 +16,13 @@ public class ResourceUtil {
 
     public static String fetchLUA(String fileName){
         String resource = null;
-        FileInputStream stream = null;
 
-        try {
-            stream = new FileInputStream(
-                               new File(
-                               ClassLoader.getSystemClassLoader().getResource(fileName).getFile()));
+        try{
+            URL url = Resources.getResource(fileName);
+            resource = Resources.toString(url, Charset.defaultCharset());
 
-            if(stream != null){
-                resource = stream.toString();
-            }
         }catch (Exception e){
             logger.error(e);
-
-        } finally {
-            if(stream != null){
-                try {
-                    stream.close();
-                }catch (Exception e){
-                    // ignore
-                }
-            }
         }
 
         return resource;
