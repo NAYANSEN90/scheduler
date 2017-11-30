@@ -1,6 +1,6 @@
 syntax = "proto2";
-package com.nrxen.scheduler.protocol_buffers;
-option java_package = "com.nrxen.scheduler";
+package com.example.scheduler.protocol_buffers;
+option java_package = "com.example.scheduler";
 option java_outer_classname = "JobRequest";
 message Request{
     required string id = 1;
