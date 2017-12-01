@@ -152,12 +152,15 @@ public class JedisJobStore implements IJobStore{
             fetchJobSHA  = jedis.scriptLoad(fetchJobLUA);
             deleteJobSHA = jedis.scriptLoad(deleteJobLUA);
 
+            scriptLoaded.compareAndSet(false,true);
+
         }catch (Exception e){
             logger.error(e);
         }
 
     }
 
+    /* shouldn't be called, as it might invalidate other scripts running in the system */
     public void flushLUA(){
         jedis.scriptFlush();
     }
@@ -202,7 +205,7 @@ public class JedisJobStore implements IJobStore{
     private String fetchQueuedJobId() {
 
         String jobId = (String)jedis.evalsha(fetchJobSHA,
-                Arrays.asList(QUEUE_KEY),
+                Arrays.asList(QUEUE_KEY, HASH_PREFIX),
                 Arrays.asList(String.valueOf(System.currentTimeMillis())));
 
         if(jobId == null || jobId.isEmpty()){
@@ -265,8 +268,6 @@ public class JedisJobStore implements IJobStore{
         JobDetail detail = null;
 
         if(jobId != null && !jobId.isEmpty()){
-
-            updateJobState(jobId, JobState.RUNNING);
             detail = fetchJob(jobId);
         }
 
@@ -298,7 +299,6 @@ public class JedisJobStore implements IJobStore{
         return updateJobState(id, state);
     }
 
-    /*TODO: Prevent deletion of job if the state of the job is running, requires a LUA script */
     @Override
     public synchronized boolean deleteJob(String id){
 
@@ -307,21 +307,13 @@ public class JedisJobStore implements IJobStore{
             Transaction t = jedis.multi();
             Response<String> resp = t.evalsha(deleteJobSHA,
                     Arrays.asList(QUEUE_KEY, HASH_PREFIX + id),
-                    Arrays.asList("state", id));
+                    Arrays.asList(id));
             t.exec();
 
             int result = Integer.parseInt(resp.get());
             if(result == 1){
                 success = true;
             }
-
-            /*
-            t.del(id);
-            t.zrem(QUEUE_KEY, id);
-            t.exec();
-
-            success = true;
-            */
         }catch (Exception e){
             logger.error(e);
         }

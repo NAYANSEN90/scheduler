@@ -44,11 +44,13 @@ public class JobWorkerVerticle extends AbstractVerticle {
 
                         }
 
+                        store.jobCompleted(detail.getId(), true);
+
                         boolean deleted = store.deleteJob(detail.getId());
                         if(deleted){
                             System.out.println("Job " + detail.getId() + " is deleted");
                         }
-                        store.jobCompleted(detail.getId(), true);
+
 
 
                         JobDetail detail1 = store.fetchJob( detail.getId() );
@@ -57,6 +59,13 @@ public class JobWorkerVerticle extends AbstractVerticle {
                             System.out.println("Completed job: " + System.currentTimeMillis());
                             System.out.println(id + "::::" + detail1);
                             System.out.println("-----------------------------------");
+                        }
+
+                        try {
+                            Thread.currentThread().sleep(100000);
+
+                        }catch (Exception e){
+
                         }
                     }
 
