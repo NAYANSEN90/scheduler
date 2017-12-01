@@ -19,7 +19,6 @@ public class JedisJobStore implements IJobStore{
     private String host;
     private int    port;
 
-    private Jedis jedis;
     private JedisPool pool;
 
     private String HASH_PREFIX;
@@ -77,6 +76,12 @@ public class JedisJobStore implements IJobStore{
         pool = new JedisPool(this.host, this.port);
     }
 
+    private void closeStore(){
+        if(pool != null){
+            pool.close();
+        }
+    }
+
     public Jedis getResource(){
         return pool.getResource();
     }
@@ -131,7 +136,7 @@ public class JedisJobStore implements IJobStore{
 
     public void loadLUA(){
 
-        try{
+        try(Jedis jedis = getResource()){
             fetchJobLUA  = ResourceUtil.fetchLUA(Constants.FETCH_JOB_LUA);
             deleteJobLUA = ResourceUtil.fetchLUA(Constants.DELETE_JOB_LUA);
 
@@ -148,13 +153,15 @@ public class JedisJobStore implements IJobStore{
 
     /* shouldn't be called, as it might invalidate other scripts running in the system */
     public void flushLUA(){
-        jedis.scriptFlush();
+        try(Jedis jedis = getResource()) {
+            jedis.scriptFlush();
+        }
     }
 
     private boolean addJob(JobDetail detail, String id, long timeOut){
 
         boolean success = false;
-        try {
+        try(Jedis jedis = getResource()) {
             Transaction t = jedis.multi();
             t.hmset(HASH_PREFIX + id, detail.transform());
             t.zadd(QUEUE_KEY, timeOut, id);
@@ -168,7 +175,7 @@ public class JedisJobStore implements IJobStore{
 
     private boolean updateJobState(String id, JobState state){
         boolean success = false;
-        try {
+        try(Jedis jedis = getResource()) {
             Transaction t = jedis.multi();
             t.hset(HASH_PREFIX + id, "state", state.toString());
             t.exec();
@@ -190,12 +197,18 @@ public class JedisJobStore implements IJobStore{
 
     private String fetchQueuedJobId() {
 
-        String jobId = (String)jedis.evalsha(fetchJobSHA,
-                Arrays.asList(QUEUE_KEY, HASH_PREFIX),
-                Arrays.asList(String.valueOf(System.currentTimeMillis())));
+        String jobId = null;
+        try(Jedis jedis = getResource()) {
 
-        if(jobId == null || jobId.isEmpty()){
-            return null;
+            jobId = (String) jedis.evalsha(fetchJobSHA,
+                    Arrays.asList(QUEUE_KEY, HASH_PREFIX),
+                    Arrays.asList(String.valueOf(System.currentTimeMillis())));
+
+            if (jobId == null || jobId.isEmpty()) {
+                return null;
+            }
+        }catch (Exception e){
+            logger.error( e );
         }
 
         return jobId;
@@ -264,12 +277,16 @@ public class JedisJobStore implements IJobStore{
     public synchronized JobDetail fetchJob(String id){
 
         JobDetail detail = null;
-        Transaction t1 = jedis.multi();
-        Response<Map<String,String>>  resp = t1.hgetAll(HASH_PREFIX + id);
-        t1.exec();
+        try(Jedis jedis = getResource()) {
+            Transaction t1 = jedis.multi();
+            Response<Map<String, String>> resp = t1.hgetAll(HASH_PREFIX + id);
+            t1.exec();
 
-        if(resp.get() != null && !resp.get().isEmpty()){
-            detail = new JobDetail(resp.get());
+            if (resp.get() != null && !resp.get().isEmpty()) {
+                detail = new JobDetail(resp.get());
+            }
+        }catch (Exception e ){
+            logger.error(e);
         }
 
         return detail;
@@ -289,7 +306,7 @@ public class JedisJobStore implements IJobStore{
     public synchronized boolean deleteJob(String id){
 
         boolean success = false;
-        try {
+        try(Jedis jedis = getResource()) {
             Transaction t = jedis.multi();
             Response<String> resp = t.evalsha(deleteJobSHA,
                     Arrays.asList(QUEUE_KEY, HASH_PREFIX + id),
