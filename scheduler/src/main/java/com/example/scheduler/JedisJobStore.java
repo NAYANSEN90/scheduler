@@ -3,6 +3,7 @@ package com.example.scheduler;
 
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import lombok.Data;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Response;
@@ -10,6 +11,7 @@ import redis.clients.jedis.Transaction;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class JedisJobStore implements IJobStore{
@@ -32,40 +34,65 @@ public class JedisJobStore implements IJobStore{
     private String fetchJobSHA;
     private String deleteJobSHA;
 
-    private static boolean testJedisConnection(final String host, final int port){
-        boolean success = false;
-        Jedis tryJedis = null;
-        try {
+    private String name = "DEFAULT_STORE@" + System.currentTimeMillis();
+    private JobCounter counter = new JobCounter(name);
 
-            do {
+    /* TODO: Separate Jobcounter class that syncs across all instances */
+    /*TODO: Constructor where the JedisPool is externally supplied */
 
-                if (host == null || host.isEmpty()) {
-                    break;
-                }
-                if (port <= 0) {
-                    break;
-                }
-                tryJedis = new Jedis(host, port);
-                String pong = "";
-                try {
-                    pong = tryJedis.ping();
-                } catch (Exception e) {
-                    logger.error(e);
-                    break;
-                }
-                if (!pong.equals("PONG")) {
-                    break;
-                }
+    @Data
+    private class JobCounter{
+        private String name;
+        private AtomicInteger submitted = new AtomicInteger(0);
+        private AtomicInteger success   = new AtomicInteger(0);
+        private AtomicInteger failed    = new AtomicInteger(0);
+        private AtomicInteger running   = new AtomicInteger(0);
 
-                success = true;
-            } while (false);
-        }finally {
-            if(tryJedis != null) {
-                tryJedis.close();
-            }
+        JobCounter(String name){
+            this.name = name;
         }
 
-        return success;
+        public void updateSubmitted(){
+            submitted.incrementAndGet();
+        }
+
+        public void updateSuccess(){
+            success.incrementAndGet();
+        }
+
+        public void updateFailed(){
+            failed.incrementAndGet();
+        }
+
+        public void updateRunning(){
+            running.incrementAndGet();
+        }
+
+        public int submitted(){
+            return submitted.get();
+        }
+
+        public int success(){
+            return success.get();
+        }
+
+        public int failed(){
+            return failed.get();
+        }
+
+        public int running(){
+            return running.get();
+        }
+
+
+        public String getStat(){
+            return String.format("Store:%s\n" +
+                    "SUBMITTED: %s\n" +
+                    "SUCCESS: %s\n" +
+                    "FAILED: %s\n" +
+                    "RUNNING: %s\n", name, submitted(), success(), failed(), running());
+
+        }
     }
 
     private void initStore(String host, int port, String hashPrefix, String queuePrefix){
@@ -88,7 +115,7 @@ public class JedisJobStore implements IJobStore{
 
     public JedisJobStore() throws IllegalArgumentException{
 
-        if(!testJedisConnection(Constants.DEFAULT_HOST, Constants.DEFAULT_PORT)){
+        if(!ConnectionHelper.testJedisConnection(Constants.DEFAULT_HOST, Constants.DEFAULT_PORT)){
             throw new IllegalArgumentException(
                     String.format("Invalid host %s or port %s", Constants.DEFAULT_HOST, Constants.DEFAULT_PORT));
         }
@@ -107,7 +134,7 @@ public class JedisJobStore implements IJobStore{
                     String.format("Invalid prefix supplied, hash: %s, queue: %s",hashPrefix, queuePrefix));
         }
 
-        if(!testJedisConnection(Constants.DEFAULT_HOST, Constants.DEFAULT_PORT)){
+        if(!ConnectionHelper.testJedisConnection(Constants.DEFAULT_HOST, Constants.DEFAULT_PORT)){
             throw new IllegalArgumentException(
                     String.format("Invalid host %s or port %s", host, port));
         }
@@ -126,7 +153,7 @@ public class JedisJobStore implements IJobStore{
                     String.format("Invalid prefix supplied, hash: %s, queue: %s",hashPrefix, queuePrefix));
         }
 
-        if(!testJedisConnection(host,port)){
+        if(!ConnectionHelper.testJedisConnection(host,port)){
             throw new IllegalArgumentException(String.format("Invalid host %s or port %s", host, port));
         }
 
@@ -167,6 +194,7 @@ public class JedisJobStore implements IJobStore{
             t.zadd(QUEUE_KEY, timeOut, id);
             t.exec();
             success = true;
+            counter.updateSubmitted();
         }catch (Exception e){
             logger.error(e);
         }
@@ -180,6 +208,11 @@ public class JedisJobStore implements IJobStore{
             t.hset(HASH_PREFIX + id, "state", state.toString());
             t.exec();
             success = true;
+            if(state == JobState.SUCCEEDED){
+                counter.updateSuccess();
+            } else {
+                counter.updateFailed();
+            }
         }catch (Exception e){
             logger.error(e);
         }
@@ -206,6 +239,8 @@ public class JedisJobStore implements IJobStore{
 
             if (jobId == null || jobId.isEmpty()) {
                 return null;
+            } else {
+                counter.updateRunning();
             }
         }catch (Exception e){
             logger.error( e );
