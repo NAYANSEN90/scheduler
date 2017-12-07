@@ -16,6 +16,7 @@ public class JobDetail {
     private long createdOn;
     private long initialDelay;
 
+    /*TODO: enhance the class with the time of running start, time of completion, or time of failing */
 
     public Map<String, String> transform(){
         Map<String, String> data = new HashMap<>();

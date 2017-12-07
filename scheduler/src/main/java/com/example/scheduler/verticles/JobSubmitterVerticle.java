@@ -1,10 +1,14 @@
 package com.example.scheduler.verticles;
 
+import com.example.scheduler.Application;
 import com.example.scheduler.IJobStore;
-import com.example.scheduler.JobRequest;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+
 
 import java.util.concurrent.atomic.AtomicBoolean;
+
 
 public class JobSubmitterVerticle  extends AbstractVerticle{
 
@@ -12,12 +16,13 @@ public class JobSubmitterVerticle  extends AbstractVerticle{
     private IJobStore store;
     private AtomicBoolean running = new AtomicBoolean(false);
     private boolean abort = false;
-    private int count = 2;
+    private int count = 100;
     private Thread submitter;
-
+    private Logger logger;
     public JobSubmitterVerticle(String id, IJobStore store){
         this.id = id;
         this.store = store;
+        this.logger = LoggerFactory.getLogger(this.id);
     }
 
     public void start(){
@@ -28,9 +33,11 @@ public class JobSubmitterVerticle  extends AbstractVerticle{
                     while(count > 0){
                         try{
                             store.submitDelayedJobRequest(
-                                    JobRequest.Request.newBuilder().setContent("Hello world" + count).build(), 0);
-                            Thread.currentThread().sleep(1000);
-                            vertx.eventBus().send(JobWorkerVerticle.WORKER_ADDRESS, "JobSubmitted");
+                                    "Hello world", 0);
+                            Thread.currentThread().sleep(10);
+                            //vertx.eventBus().send(JobWorkerVerticle.WORKER_ADDRESS, "JobSubmitted");
+                            long counter = Application.jobSubmittedCounter.incrementAndGet();
+                            logger.info("Submitting job number" + counter);
                             count --;
 
                         }catch (Exception e){

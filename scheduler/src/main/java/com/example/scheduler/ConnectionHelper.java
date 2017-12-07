@@ -45,7 +45,7 @@ public class ConnectionHelper {
         return success;
     }
 
-    private static boolean testJedisConnection(final JedisPool pool){
+    public static boolean testJedisConnection(final JedisPool pool){
         boolean success = false;
         if(pool == null || pool.isClosed()){
             return success;
